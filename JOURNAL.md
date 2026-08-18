@@ -14,4 +14,4 @@
 | *Aug 18, 12:45 PM* | `127.0.0.1:8000` infinite loading in browser | Windows network loopback behavior | Switched to `http://localhost:8000` and updated Uvicorn host flag. |
 ## Personal Reflection & Learning Outcomes
 
-> "I have been able to try and do the task while learning as I go. I have learned Git commands and Python commands and applied them practically. My project may not be perfect, but I have gained significant hands-on experience and understanding from completing this task."
+> I have been able to try and do the task while learning as I go. I have learned Git commands and Python commands and applied them practically. My project may not be perfect, but I have gained significant hands-on experience and understanding from completing this task.
