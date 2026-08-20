@@ -1,33 +1,51 @@
-import hmac
-import hashlib
-import json
-import requests
+import time
+import httpx
 
-URL = "http://localhost:8000/webhook"
-SECRET_KEY = b"my_super_secret_warehouse_key"
+BASE_URL = "http://127.0.0.1:8000"
 
-# Sample inventory update payload
-data = {
-    "item_id": "SKU-9942",
-    "item_name": "Wireless Mouse",
-    "stock_count": 120
-}
+def scan_badge(attendee_id: str):
+    print(f"\n--- [SCANNING] Kiosk scanned badge for {attendee_id} ---")
+    response = httpx.post(f"{BASE_URL}/checkin", json={"attendee_id": attendee_id})
+    print(f"HTTP Status: {response.status_code}")
+    print(f"Response: {response.json()}")
 
-payload_bytes = json.dumps(data).encode('utf-8')
-signature = hmac.new(SECRET_KEY, payload_bytes, hashlib.sha256).hexdigest()
+def print_current_states():
+    response = httpx.get(f"{BASE_URL}/attendees")
+    print("\n--- [DATABASE STATE] Current Attendee Statuses ---")
+    for att_id, info in response.json().items():
+        print(f"  * {att_id} ({info['name']}): {info['status']}")
 
-headers = {
-    "Content-Type": "application/json",
-    "X-Signature": signature
-}
+if __name__ == "__main__":
+    print("==================================================")
+    print("   SOLSTICE EVENTS CO. - DAY 4 PIVOT TEST SUITE  ")
+    print("==================================================")
 
-# Test 1: Send valid signature
-print("--- Sending Valid Webhook ---")
-response = requests.post(URL, data=payload_bytes, headers=headers)
-print(f"Status: {response.status_code} | Response: {response.text}\n")
+    # 1. Display initial database state (all UNCHECKED)
+    print_current_states()
 
-# Test 2: Send invalid signature
-print("--- Sending Tampered Webhook ---")
-bad_headers = {"Content-Type": "application/json", "X-Signature": "fake_invalid_signature_123"}
-bad_response = requests.post(URL, data=payload_bytes, headers=bad_headers)
-print(f"Status: {bad_response.status_code} | Response: {bad_response.text}")
+    # 2. Test Attendee 1 - First Scan (Expect 200 OK + PENDING)
+    scan_badge("ATT-001")
+
+    # 3. Test Attendee 1 - Duplicate Scan while PENDING (Expect 409 Conflict)
+    scan_badge("ATT-001")
+
+    # 4. Wait for background print callback to arrive
+    print("\n[WAITING] Pausing 4 seconds for vendor webhook callback...")
+    time.sleep(4)
+
+    # 5. Verify ATT-001 transitioned from PENDING to CHECKED_IN
+    print_current_states()
+
+    # 6. Test Attendee 1 - Duplicate Scan after CHECKED_IN (Expect 409 Conflict)
+    scan_badge("ATT-001")
+
+    # 7. Test Attendee 2 and Attendee 3 (Standard async flows)
+    scan_badge("ATT-002")
+    scan_badge("ATT-003")
+
+    # 8. Wait for remaining callbacks to complete
+    print("\n[WAITING] Pausing 4 seconds for remaining callbacks...")
+    time.sleep(4)
+
+    # 9. Final verification of all 3 attendees
+    print_current_states()
